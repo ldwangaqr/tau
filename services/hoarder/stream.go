@@ -8,9 +8,9 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/ipfs/go-datastore"
-	"github.com/taubyte/p2p/streams"
-	"github.com/taubyte/p2p/streams/command"
-	cr "github.com/taubyte/p2p/streams/command/response"
+	"github.com/taubyte/tau/p2p/streams"
+	"github.com/taubyte/tau/p2p/streams/command"
+	cr "github.com/taubyte/tau/p2p/streams/command/response"
 	hoarderSpecs "github.com/taubyte/tau/pkg/specs/hoarder"
 	"github.com/taubyte/utils/maps"
 )
@@ -159,8 +159,4 @@ func (srv *Service) rareHandler(ctx context.Context) (cr.Response, error) {
 	}
 
 	return cr.Response{"rare": rareCID}, nil
-}
-
-func (s *Service) ping(context.Context, streams.Connection, command.Body) (cr.Response, error) {
-	return cr.Response{"time": int(time.Now().Unix())}, nil
 }

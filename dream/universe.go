@@ -9,8 +9,8 @@ import (
 	"path"
 	"sync"
 
-	peer "github.com/taubyte/p2p/peer"
 	commonIface "github.com/taubyte/tau/core/common"
+	peer "github.com/taubyte/tau/p2p/peer"
 	commonSpecs "github.com/taubyte/tau/pkg/specs/common"
 	"github.com/taubyte/tau/utils"
 
@@ -223,7 +223,6 @@ func (u *Universe) StartWithConfig(mainConfig *Config) error {
 
 		config.PrivateKey = privKey
 		config.PublicKey = pubKey
-		config.SwarmKey = u.swarmKey
 
 		wg.Add(1)
 		go func(service string, config commonIface.ServiceConfig) {

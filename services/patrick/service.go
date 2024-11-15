@@ -17,7 +17,7 @@ import (
 	"github.com/taubyte/tau/pkg/kvdb"
 	servicesCommon "github.com/taubyte/tau/services/common"
 
-	streams "github.com/taubyte/p2p/streams/service"
+	streams "github.com/taubyte/tau/p2p/streams/service"
 )
 
 var (
@@ -123,6 +123,8 @@ func New(ctx context.Context, config *tauConfig.Node) (*PatrickService, error) {
 		}
 		for {
 			select {
+			case <-ctx.Done():
+				return
 			case <-time.After(DefaultReAnnounceJobTime):
 				_ctx, cancel := context.WithTimeout(ctx, DefaultReAnnounceJobTime)
 				err := srv.ReannounceJobs(_ctx)
@@ -130,8 +132,6 @@ func New(ctx context.Context, config *tauConfig.Node) (*PatrickService, error) {
 				if err != nil {
 					logger.Error(err)
 				}
-			case <-ctx.Done():
-				return
 			}
 		}
 	}()

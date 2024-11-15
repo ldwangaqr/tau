@@ -6,9 +6,9 @@ import (
 	"time"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/taubyte/p2p/peer"
 	"github.com/taubyte/tau/clients/p2p/tns/common"
 	"github.com/taubyte/tau/core/services/tns"
+	"github.com/taubyte/tau/p2p/peer"
 )
 
 func newCache(node peer.Node) *cache {
@@ -85,6 +85,9 @@ func (sub *subscription) watch() {
 	go func() {
 		for {
 			select {
+			case <-sub.ctx.Done():
+				sub.close()
+				return
 			case k := <-sub.key:
 				if k == "" {
 					for _, k := range sub.keys {
@@ -101,9 +104,6 @@ func (sub *subscription) watch() {
 					sub.close()
 					return
 				}
-			case <-sub.ctx.Done():
-				sub.close()
-				return
 			}
 		}
 	}()

@@ -4,10 +4,11 @@ import (
 	"context"
 
 	"github.com/ipfs/go-log/v2"
-	"github.com/taubyte/p2p/peer"
-	client "github.com/taubyte/p2p/streams/client"
 	iface "github.com/taubyte/tau/core/services/monkey"
+	"github.com/taubyte/tau/p2p/peer"
+	client "github.com/taubyte/tau/p2p/streams/client"
 
+	peerCore "github.com/libp2p/go-libp2p/core/peer"
 	protocolCommon "github.com/taubyte/tau/services/common"
 )
 
@@ -17,13 +18,14 @@ var _ iface.Client = &Client{}
 
 type Client struct {
 	client *client.Client
+	peers  []peerCore.ID
 }
 
 func (c *Client) Close() {
 	c.client.Close()
 }
 
-func New(ctx context.Context, node peer.Node) (*Client, error) {
+func New(ctx context.Context, node peer.Node) (iface.Client, error) {
 	var (
 		c   Client
 		err error

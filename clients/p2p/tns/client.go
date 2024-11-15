@@ -5,16 +5,18 @@ import (
 	"fmt"
 
 	"github.com/mitchellh/mapstructure"
-	"github.com/taubyte/p2p/peer"
-	"github.com/taubyte/p2p/streams/client"
-	"github.com/taubyte/p2p/streams/command"
 	"github.com/taubyte/tau/clients/p2p/tns/common"
 	"github.com/taubyte/tau/core/services/tns"
+	"github.com/taubyte/tau/p2p/peer"
+	"github.com/taubyte/tau/p2p/streams/client"
+	"github.com/taubyte/tau/p2p/streams/command"
 
 	spec "github.com/taubyte/tau/pkg/specs/common"
 	"github.com/taubyte/tau/pkg/specs/extract"
 	"github.com/taubyte/tau/pkg/specs/methods"
 	"github.com/taubyte/utils/maps"
+
+	srvCommon "github.com/taubyte/tau/services/common"
 )
 
 func New(ctx context.Context, node peer.Node) (tns.Client, error) {
@@ -25,7 +27,7 @@ func New(ctx context.Context, node peer.Node) (tns.Client, error) {
 
 	c.cache = newCache(node)
 	c.node = node
-	c.client, err = client.New(node, spec.TnsProtocol)
+	c.client, err = client.New(node, srvCommon.TnsProtocol)
 	if err != nil {
 		logger.Error("API client creation failed:", err)
 		return nil, err
@@ -42,7 +44,7 @@ func (c *Client) Close() {
 
 /****** LIST *******/
 func (c *Client) List(depth int) ([]string, error) {
-	response, err := c.client.Send("list", command.Body{"depth": depth})
+	response, err := c.client.Send("list", command.Body{"depth": depth}, c.peers...)
 	if err != nil {
 		logger.Error(err)
 		return nil, err
@@ -69,7 +71,7 @@ func (c *Client) Fetch(path tns.Path) (tns.Object, error) {
 		if err != nil {
 			return nil, err
 		}
-		c.cache.put(path, object)
+		c.cache.put(path, object) // this will start a go func to watch FIX
 	}
 
 	return &responseObject{
@@ -97,7 +99,7 @@ func (c *Client) Push(path []string, data interface{}) error {
 	response, err := c.client.Send("push", command.Body{
 		"path": path,
 		"data": data,
-	})
+	}, c.peers...)
 	if err != nil {
 		logger.Error("push failed with:", err)
 		return err
@@ -120,7 +122,7 @@ func (c *Client) Push(path []string, data interface{}) error {
 /****** COMMON *******/
 
 func (c *Client) fetch(path []string) (interface{}, error) {
-	response, err := c.client.Send("fetch", command.Body{"path": path})
+	response, err := c.client.Send("fetch", command.Body{"path": path}, c.peers...)
 	if err != nil {
 		logger.Error("fetch failed with:", err)
 		return nil, err
@@ -135,7 +137,7 @@ func (c *Client) fetch(path []string) (interface{}, error) {
 }
 
 func (c *Client) lookup(query tns.Query) ([]string, error) {
-	response, err := c.client.Send("lookup", command.Body{"prefix": query.Prefix, "regex": query.RegEx})
+	response, err := c.client.Send("lookup", command.Body{"prefix": query.Prefix, "regex": query.RegEx}, c.peers...)
 	if err != nil {
 		logger.Error("lookup failed with:", err)
 		return nil, err
@@ -145,13 +147,27 @@ func (c *Client) lookup(query tns.Query) ([]string, error) {
 }
 
 // Use for indexed object links
-func (r *responseObject) Current(branch string) ([]tns.Path, error) {
-	// Grab Interface and convert to list
+func (r *responseObject) Current(branches []string) (paths []tns.Path, err error) {
 	ifaceList, ok := r.Interface().([]interface{})
 	if !ok {
 		return nil, fmt.Errorf("cannot convert paths iface `%v` to []interface{}", r.Interface())
 	}
 
+	for _, branch := range branches {
+		paths, err = r.current(ifaceList, branch)
+		if err == nil && len(paths) != 0 {
+			break
+		}
+	}
+
+	if len(paths) == 0 {
+		return nil, fmt.Errorf("no paths returned from current for branches %s", branches)
+	}
+
+	return
+}
+
+func (r *responseObject) current(ifaceList []interface{}, branch string) ([]tns.Path, error) {
 	paths := make([]tns.Path, 0)
 	var projectId string
 	var commit string
@@ -188,10 +204,6 @@ func (r *responseObject) Current(branch string) ([]tns.Path, error) {
 		}
 
 		paths = append(paths, currentPath)
-	}
-
-	if len(paths) < 1 {
-		return nil, fmt.Errorf("no paths returned from current for branch %s", branch)
 	}
 
 	return paths, nil

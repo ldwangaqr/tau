@@ -4,18 +4,17 @@ package tests
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
 	peercore "github.com/libp2p/go-libp2p/core/peer"
 
-	keypair "github.com/taubyte/p2p/keypair"
+	keypair "github.com/taubyte/tau/p2p/keypair"
 
 	hoarder_client "github.com/taubyte/tau/clients/p2p/hoarder"
 	"github.com/taubyte/tau/config"
 
-	peer "github.com/taubyte/p2p/peer"
+	peer "github.com/taubyte/tau/p2p/peer"
 	"github.com/taubyte/tau/services/common"
 	service "github.com/taubyte/tau/services/hoarder"
 )
@@ -23,12 +22,7 @@ import (
 func TestHoarderClient(t *testing.T) {
 	ctx := context.Background()
 
-	srvRoot, err := os.MkdirTemp("/tmp", "clientSrvRoot")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	defer os.RemoveAll(srvRoot)
+	srvRoot := t.TempDir()
 
 	srv, err := service.New(ctx, &config.Node{
 		Root:        srvRoot,

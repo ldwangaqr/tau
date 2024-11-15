@@ -4,12 +4,12 @@ import (
 	"context"
 	"io"
 
-	"github.com/taubyte/p2p/streams/client"
 	services "github.com/taubyte/tau/core/services"
 	"github.com/taubyte/tau/core/services/substrate/counters"
 	"github.com/taubyte/tau/core/services/substrate/smartops"
 	"github.com/taubyte/tau/core/services/tns"
 	"github.com/taubyte/tau/core/vm"
+	"github.com/taubyte/tau/p2p/streams/client"
 )
 
 type Service interface {
@@ -30,7 +30,7 @@ type Service interface {
 }
 
 type ProxyClient interface {
-	ProxyHTTP(host string, path string, method string, ops ...client.Option) (<-chan *client.Response, error)
+	ProxyHTTP(host string, path string, method string, ops ...client.Option[client.Request]) (<-chan *client.Response, error)
 	io.Closer
 }
 
