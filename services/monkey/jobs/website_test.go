@@ -5,10 +5,7 @@ import (
 	"testing"
 
 	commonTest "github.com/taubyte/tau/dream/helpers"
-	"gotest.tools/assert"
-
-	_ "github.com/taubyte/tau/services/hoarder"
-	_ "github.com/taubyte/tau/services/tns"
+	"gotest.tools/v3/assert"
 )
 
 func TestRunWebsiteBasic(t *testing.T) {

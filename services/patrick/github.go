@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/fxamacker/cbor/v2"
-	http "github.com/taubyte/http"
 	"github.com/taubyte/tau/core/services/patrick"
+	http "github.com/taubyte/tau/pkg/http"
 	patrickSpecs "github.com/taubyte/tau/pkg/specs/patrick"
 	servicesCommon "github.com/taubyte/tau/services/common"
 	"github.com/taubyte/utils/id"
@@ -126,7 +126,7 @@ func (srv *PatrickService) githubHookHandler(ctx http.Context) (interface{}, err
 			return nil, fmt.Errorf("failed registering new job repo %d into tns with error: %v", newJob.Meta.Repository.ID, err)
 		}
 
-		logger.Error("job full:", newJob)
+		logger.Debugf("job full: %#v", newJob)
 
 		return newJob, nil
 	default:

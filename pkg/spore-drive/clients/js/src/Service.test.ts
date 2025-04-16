@@ -5,18 +5,21 @@ describe("Service", () => {
 
   beforeAll(() => {
     service = new Service();
-    service["packageVersion"]="0.1.0" // override to a published version
+    service["packageVersion"] = "0.1.3"; // override to a published version
   });
 
   afterAll(async () => {
     await service.kill();
   });
 
-  it("should return null when service is not running", () => {
-    const port = service.getPort();
+  it("should return null when service is not running", async () => {
+    await service.kill();
+    const port = await service.getPort();
     expect(port).toBe(null);
   });
 
+  // TODO: re-enable once we release a spore-drive binary that supports healthcheck
+  // Need to set the right version in line 8
   it("should run the full workflow", async () => {
     console.log("Running the full workflow...");
 
@@ -27,9 +30,7 @@ describe("Service", () => {
 
     expect(service["versionMatches"]()).toBe(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    const port = service.getPort();
+    const port = await service.getPort();
     console.log(`Port found: ${port}`);
     expect(typeof port).toBe("number");
   });

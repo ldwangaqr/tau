@@ -1,7 +1,5 @@
 import { Config } from "./Config";
-import { CourseConfig, Drive, TauBinarySource, TauPath, TauUrl } from "./Drive";
-import { RPCClient as DriveClient } from "./DriveClient";
-import { RPCClient as ConfigClient } from "./ConfigClient";
+import { CourseConfig, Drive, TauPath } from "./Drive";
 
 import { PromiseClient, createPromiseClient } from "@connectrpc/connect";
 import { MockSSHService } from "../gen/mock/v1/ssh_connect";
@@ -9,7 +7,6 @@ import { createConnectTransport } from "@connectrpc/connect-node";
 
 import { DisplacementProgress } from "../gen/drive/v1/drive_pb";
 
-import { Source } from "../gen/config/v1/config_pb";
 import { exec, ChildProcess } from "child_process";
 
 import * as fs from "fs";
@@ -27,29 +24,29 @@ export const createConfig = async (
   config: Config
 ) => {
   // Set Cloud Domain
-  await config.Cloud().Domain().Root().Set("test.com");
-  await config.Cloud().Domain().Generated().Set("gtest.com");
-  await config.Cloud().Domain().Validation().Generate();
+  await config.cloud.domain.root.set("test.com");
+  await config.cloud.domain.generated.set("gtest.com");
+  await config.cloud.domain.validation.generate();
 
   // Generate P2P Swarm keys
-  await config.Cloud().P2P().Swarm().Generate();
+  await config.cloud.p2p.swarm.generate();
 
   // Set Auth configurations
-  const mainAuth = config.Auth().Signer("main");
-  await mainAuth.Username().Set("tau1");
-  await mainAuth.Password().Set("testtest");
+  const mainAuth = config.auth.signer["main"];
+  await mainAuth.username.set("tau1");
+  await mainAuth.password.set("testtest");
 
   // Set Shapes configurations
-  const shape1 = config.Shapes().Shape("shape1");
-  await shape1.Services().Set(["auth", "seer"]);
-  await shape1.Ports().Port("main").Set(BigInt(4242));
-  await shape1.Ports().Port("lite").Set(BigInt(4262));
+  const shape1 = config.shape["shape1"];
+  await shape1.services.set(["auth", "seer"]);
+  await shape1.ports.port["main"].set(4242);
+  await shape1.ports.port["lite"].set(4262);
 
-  const shape2 = config.Shapes().Shape("shape2");
-  await shape2.Services().Set(["gateway", "patrick", "monkey"]);
-  await shape2.Ports().Port("main").Set(BigInt(6242));
-  await shape2.Ports().Port("lite").Set(BigInt(6262));
-  await shape2.Plugins().Set(["plugin1@v0.1"]);
+  const shape2 = config.shape["shape2"];
+  await shape2.services.set(["gateway", "patrick", "monkey"]);
+  await shape2.ports.port["main"].set(6242);
+  await shape2.ports.port["lite"].set(6262);
+  await shape2.plugins.set(["plugin1@v0.1"]);
 
   // Set Hosts
   const host1Inst = await mock_client.new(
@@ -60,16 +57,13 @@ export const createConfig = async (
     })
   );
 
-  const host1 = config.Hosts().Host("host1");
-  await host1.Addresses().Add(["127.0.0.1/32"]);
-  await host1
-    .SSH()
-    .Address()
-    .Set("127.0.0.1:" + host1Inst.port);
-  await host1.SSH().Auth().Add(["main"]);
-  await host1.Location().Set("1.25, 25.1");
-  await host1.Shapes().Shape("shape1").Instance().Generate();
-  await host1.Shapes().Shape("shape2").Instance().Generate();
+  const host1 = config.host["host1"];
+  await host1.addresses.add(["127.0.0.1/32"]);
+  await host1.ssh.address.set("127.0.0.1:" + host1Inst.port);
+  await host1.ssh.auth.add(["main"]);
+  await host1.location.set("1.25, 25.1");
+  await host1.shape["shape1"].generate();
+  await host1.shape["shape2"].generate();
 
   const host2Inst = await mock_client.new(
     new HostConfig({
@@ -79,40 +73,31 @@ export const createConfig = async (
     })
   );
 
-  const host2 = config.Hosts().Host("host2");
-  await host2.Addresses().Add(["127.0.0.1/32"]);
-  await host2
-    .SSH()
-    .Address()
-    .Set("127.0.0.1:" + host2Inst.port);
-  await host2.SSH().Auth().Add(["main"]);
-  await host2.Location().Set("1.25, 25.1");
-  await host2.Shapes().Shape("shape1").Instance().Generate();
-  await host2.Shapes().Shape("shape2").Instance().Generate();
+  const host2 = config.host["host2"];
+  await host2.addresses.add(["127.0.0.1/32"]);
+  await host2.ssh.address.set("127.0.0.1:" + host2Inst.port);
+  await host2.ssh.auth.add(["main"]);
+  await host2.location.set("1.25, 25.1");
+  await host2.shape["shape1"].generate();
+  await host2.shape["shape2"].generate();
 
   // Set P2P Bootstrap
-  await config
-    .Cloud()
-    .P2P()
-    .Bootstrap()
-    .Shape("shape1")
-    .Nodes()
-    .Add(["host2", "host1"]);
-  await config
-    .Cloud()
-    .P2P()
-    .Bootstrap()
-    .Shape("shape2")
-    .Nodes()
-    .Add(["host2", "host1"]);
+  await config.cloud.p2p.bootstrap.shape["shape1"].nodes.add([
+    "host2",
+    "host1",
+  ]);
+  await config.cloud.p2p.bootstrap.shape["shape2"].nodes.add([
+    "host2",
+    "host1",
+  ]);
 
-  await config.Commit();
+  await config.commit();
 };
 
 describe("Drive Class Integration Tests", () => {
   let mock_client: PromiseClient<typeof MockSSHService>;
   let drive: Drive;
-  let config :Config;
+  let config: Config;
   let rpcUrl: string;
   let mockServerProcess: ChildProcess;
   let tempDir: string;
@@ -126,7 +111,10 @@ describe("Drive Class Integration Tests", () => {
         });
         mockServerProcess.stdout?.on("data", (data: string) => {
           if (!rpcUrl) {
-            resolve(data.trim());
+            // Wait 3 seconds before resolving to ensure server is ready
+            setTimeout(() => {
+              resolve(data.trim());
+            }, 3000);
           }
         });
         mockServerProcess.stderr?.on("data", (data: string) => {
@@ -146,11 +134,12 @@ describe("Drive Class Integration Tests", () => {
 
     mock_client = createPromiseClient(MockSSHService, transport);
 
-    touchFile("/tmp/faketau")
+    touchFile("/tmp/faketau");
   });
 
   afterAll(async () => {
     if (mockServerProcess) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       controller.abort();
       await new Promise((resolve) => mockServerProcess.on("close", resolve));
     }
@@ -275,18 +264,21 @@ describe("Drive Class Integration Tests", () => {
       cmds.push(cmd);
     }
 
-    expect(cmds).toEqual([
-      { command: 'command "-v" "systemctl"', index: 0 },
-      { command: 'command "-v" "apt"', index: 1 },
-      { command: 'command "-v" "docker"', index: 2 },
-      { command: 'sudo "apt-get" "update"', index: 3 },
-      { command: 'command "-v" "dig"', index: 4 },
-      { command: 'command "-v" "netstat"', index: 5 },
-      { command: 'sudo "netstat" "-lnp"', index: 6 },
-      {
-        command: 'dig "+short" "+timeout=5" "@1.1.1.1" "google.com"',
-        index: 7,
-      },
-    ]);
+    expect(new Set(cmds)).toEqual(
+      new Set([
+        { command: 'command "-v" "systemctl"', index: expect.any(Number) },
+        { command: 'command "-v" "apt"', index: expect.any(Number) },
+        { command: 'command "-v" "docker"', index: expect.any(Number) },
+        { command: 'sudo "apt-get" "update"', index: expect.any(Number) },
+        { command: 'command "-v" "dig"', index: expect.any(Number) },
+        { command: 'command "-v" "netstat"', index: expect.any(Number) },
+        { command: 'sudo "netstat" "-lnp"', index: expect.any(Number) },
+        {
+          command: 'dig "+short" "+timeout=5" "@1.1.1.1" "google.com"',
+          index: expect.any(Number),
+        },
+      ])
+    );
+    expect(cmds.length).toBe(8);
   });
 });

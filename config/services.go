@@ -1,14 +1,16 @@
 package config
 
 import (
+	"crypto"
+	"crypto/x509"
 	"errors"
 	"regexp"
 
-	http "github.com/taubyte/http"
 	"github.com/taubyte/tau/core/kvdb"
 	"github.com/taubyte/tau/core/p2p/keypair"
 	seerIface "github.com/taubyte/tau/core/services/seer"
 	"github.com/taubyte/tau/p2p/peer"
+	http "github.com/taubyte/tau/pkg/http"
 )
 
 var (
@@ -36,6 +38,12 @@ type Node struct {
 	AliasDomainsRegExp    []*regexp.Regexp
 	GeneratedDomainRegExp *regexp.Regexp
 	ServicesDomainRegExp  *regexp.Regexp
+
+	CustomAcme               bool
+	AcmeUrl                  string
+	AcmeKey                  crypto.Signer
+	AcmeCAInsecureSkipVerify bool
+	AcmeRootCA               *x509.CertPool
 
 	Node       peer.Node
 	PrivateKey []byte
